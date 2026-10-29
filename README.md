@@ -12,7 +12,7 @@
 
 ## 🟡 Status
 
-**MVP técnico funcional — núcleo M0–M5 validado localmente.** Ingestão at-least-once com outbox, projeção idempotente, DLT/redrive auditado, saúde de dispositivo com incidentes, evidências S3 com integridade e reconciliação de upload interrompido, tracing ponta a ponta e métricas com alertas. Evidência: 17 checks de integração contra o Compose real, 3 testes Kotlin (um com Testcontainers), 3 testes Python, um crash SIGKILL com 300 eventos projetados uma única vez e um benchmark antes/depois com causa raiz medida. **Ainda não:** execução remota do CI comprovada, benchmark com vários devices/instâncias, autenticação por dispositivo, vídeo contínuo e hardware físico.
+**MVP técnico funcional — núcleo M0–M5 validado localmente e no CI.** Ingestão at-least-once com outbox, projeção idempotente, DLT/redrive auditado, saúde de dispositivo com incidentes, evidências S3 com integridade e reconciliação de upload interrompido, tracing ponta a ponta e métricas com alertas. Evidência: 17 checks de integração contra o Compose real, 3 testes Kotlin (um com Testcontainers), 3 testes Python, um crash SIGKILL com 300 eventos projetados uma única vez e um benchmark antes/depois com causa raiz medida. O GitHub Actions executa a mesma suíte num runner Ubuntu, com o Compose completo. **Ainda não:** benchmark com vários devices/instâncias, autenticação por dispositivo, vídeo contínuo e hardware físico.
 
 | Área | Estado | Evidência |
 |---|---|---|
@@ -23,7 +23,7 @@
 | Observabilidade | ✅ | `tracing_check`, `promtool` (5 regras), Grafana (10 painéis via API) |
 | Desempenho | 🟡 | [benchmark](docs/benchmark.md): um host, um device |
 | Integração VisionBrain | 🟡 | `adapters/visionbrain_check.py` (depende do projeto vizinho) |
-| CI remoto | ⏳ | workflow incluído; resultado depende do primeiro push |
+| CI remoto | ✅ | [build + integração verdes](https://github.com/Yuri-Fernando/FleetCam-IoT-Video-Platform/actions/runs/40957044096) no GitHub Actions (Ubuntu) |
 
 ---
 
@@ -51,7 +51,7 @@ O projeto começou com um documento de escopo próprio (não versionado) que aud
 | Marco | Gate de aceitação (resumo) | Estado |
 |---|---|---|
 | M0 — contratos e decisões | outro dev entende como falha vira incidente e como evento atrasado é processado | ✅ contrato v1, ADRs, ameaças |
-| M1 — Kotlin + Kafka + Postgres | 20 devices ONLINE; replay não duplica; crash/redelivery provado; sem perda quando Kafka cai | ✅ local · ⏳ CI remoto |
+| M1 — Kotlin + Kafka + Postgres | 20 devices ONLINE; replay não duplica; crash/redelivery provado; sem perda quando Kafka cai | ✅ local e CI |
 | M2 — saúde e falhas controladas | falhas nomeadas com ground truth; DLT recuperável; offline ≠ broker atrasado | 🟡 8 cenários; ground truth parcial |
 | M3 — evidência e observabilidade | upload interrompido reconciliado; evento nunca aponta para evidência não confirmada; dashboards comparados ao banco | ✅ |
 | M4 — VisionBrain e console | mesmo `event_id` atravessa o adapter; console mostra origem; URL assinada | 🟡 jornadas principais |
@@ -304,7 +304,7 @@ Todas as execuções processaram 500/500 com zero erros. Percentis pelo método 
 ```text
 v0.2  laboratório local: monólito modular, 1 host, 1 publicador, frota sintética
   ↓
-v0.3  consumidor em lote + benchmark com N devices e várias execuções; CI remoto verde
+v0.3  consumidor em lote + benchmark com N devices e várias execuções no CI
   ↓
 v0.4  claim concorrente do outbox (várias instâncias) + identidade por dispositivo (mTLS)
   ↓
@@ -319,7 +319,7 @@ v1.0  rollout de firmware simulado com detecção de regressão por coorte
 
 **M0 — Contratos e decisões** ✅ Concluída — contrato v1, ADR 001–003, [modelo de ameaças](docs/threats.md).
 
-**M1 — Kotlin + Kafka + Postgres** ✅ Concluída localmente — `RedeliveryTest`, `fault_check`, `crash_check`; CI remoto pendente do primeiro push.
+**M1 — Kotlin + Kafka + Postgres** ✅ Concluída — `RedeliveryTest`, `fault_check`, `crash_check`, local e no GitHub Actions.
 
 **M2 — Saúde, incidentes e falhas controladas** 🟡 Parcial — 8 cenários, DLT/redrive, boots e histerese de SD testados; ground truth não cobre todas as transições.
 
@@ -352,7 +352,6 @@ Registro de validação por data: [docs/validation.md](docs/validation.md). O RE
 - Gate M5: lag medido e comparação antes/depois com causa raiz.
 
 **Dependem de terceiros / ambiente**
-- Primeira execução do GitHub Actions (job `integration` sobe o Compose num runner Ubuntu).
 - `adapters/visionbrain_check.py` exige o repositório VisionBrain clonado ao lado e suas dependências.
 
 **Próximos técnicos (o que eu faria numa v2)**
@@ -433,7 +432,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}:/app -w /
 | Ambiente | Situação |
 |---|---|
 | Windows 11 + Docker Desktop | verificado nesta revisão (tudo acima) |
-| GitHub Actions (Ubuntu) | workflow em [`.github/workflows/ci.yml`](.github/workflows/ci.yml): build + testes Kotlin + unitários Python, e um job de integração com o Compose |
+| GitHub Actions (Ubuntu) | [verde](https://github.com/Yuri-Fernando/FleetCam-IoT-Video-Platform/actions/runs/40957044096): build + testes Kotlin (Testcontainers) + unitários Python, e job de integração com o Compose e os 17 checks |
 | Linux local | não verificado nesta revisão; os comandos `python` equivalem aos `py -3.10` |
 
 `fault_check`, `decommission_replay_check` e `crash_check` param serviços deste Compose; `redrive_check` cria e remove uma falha temporária no banco. Execute-os apenas no laboratório.
@@ -511,13 +510,13 @@ O check integrado analisa um quadro preto sintético pelas regras reais de **qua
 - **Mídia.** Sem vídeo contínuo, streaming ou captura física.
 - **Contrato v1** documenta o formato, mas não é executado como validador JSON Schema.
 - **Histerese** existe só para SD; captura e conectividade usam regras simples.
-- **Não verificado nesta revisão:** execução remota do CI; Linux local; `visionbrain_check` (depende do projeto vizinho; passou numa revisão anterior registrada em [validation](docs/validation.md)); inspeção visual do Grafana além da captura acima.
+- **Não verificado nesta revisão:** Linux local fora do CI; `visionbrain_check` (depende do projeto vizinho; passou numa revisão anterior registrada em [validation](docs/validation.md)); inspeção visual do Grafana além da captura acima.
 
 ---
 
 ## Status
 
-🟡 **MVP técnico funcional — v0.2.** Os gates M1, M3 e M5 estão fechados com evidência local (17/17 checks, 3/3 testes Kotlin, crash SIGKILL, benchmark antes/depois); M2 e M4 estão parciais; CI remoto e escala com vários devices ainda não foram comprovados.
+🟡 **MVP técnico funcional — v0.2.** Os gates M1, M3 e M5 estão fechados com evidência local e no GitHub Actions (17/17 checks, 3/3 testes Kotlin, crash SIGKILL, benchmark antes/depois); M2 e M4 estão parciais; escala com vários devices ainda não foi comprovada.
 
 ---
 

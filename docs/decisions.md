@@ -19,7 +19,7 @@ Medição em 29/10/2026 mostrou que cada commit do PostgreSQL custa cerca de 55 
 ## Marcos
 
 - M0: contrato, decisões, diagrama e modelo de ameaças do laboratório registrados; faltam aprofundamento e revisão independente para qualquer uso externo.
-- M1: registro, ingestão, outbox e projeção; teste local com 20 devices e indisponibilidade Kafka passou. Testcontainers comprovou reentrega sem commit; `crash_check.py` mata o processo da API com SIGKILL no meio de um backlog de 300 eventos e confirma projeção única após o reinício. Falta confirmar o CI remoto.
+- M1: registro, ingestão, outbox e projeção; teste local com 20 devices e indisponibilidade Kafka passou. Testcontainers comprovou reentrega sem commit; `crash_check.py` mata o processo da API com SIGKILL no meio de um backlog de 300 eventos e confirma projeção única após o reinício. A mesma suíte passa no GitHub Actions.
 - M2: cenários, timeline, DLT/redrive e incidentes básicos; sessões de boot, replay de boot encerrado e histerese configurável de SD foram testados; faltam políticas completas para as demais dimensões e ground truth completo.
 - M3: fluxo S3, integridade, retenção, reconciliação de upload interrompido (ADR 002) e Prometheus/Grafana implementados e verificados; tracing HTTP–outbox–Kafka validado no Jaeger.
 - M4: adapter VisionBrain e console React básicos implementados; o envio automático do snapshot nativo foi implementado e testado; faltam outras jornadas completas previstas no escopo.
