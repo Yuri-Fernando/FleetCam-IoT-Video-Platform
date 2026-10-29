@@ -204,6 +204,8 @@ escopo e gates M0–M5 → contrato v1 e ADR 001 → núcleo Kotlin (ingestão/o
 
 **5. Crash abrupto ainda não estava provado.** O teste Testcontainers fechava o consumidor sem commit, mas não matava o processo. `crash_check.py` cria um backlog de 300 eventos com o Kafka parado, religa o broker e aplica `SIGKILL` na API no meio do processamento (9/300 processados numa execução, 1/300 em outra). Após o reinício: 300/300 projetados uma vez e uma reentrega reconhecida pelo novo contador.
 
+**6. Primeira execução do CI: corrida na inicialização a frio.** No runner, o job `build` passou (incluindo Testcontainers), mas `tenant_check` recebeu `503` no upload de evidência. Os logs mostravam o SeaweedFS ainda conectando master e filer: o CI esperava só a saúde da API, e localmente o objectstore já estava no ar havia horas. A API se comportou como projetado (503 = "armazenamento indisponível, ainda pendente"). *Correção:* [`simulator/wait_ready.py`](simulator/wait_ready.py) faz um upload S3 real e o confirma antes dos checks, no CI e na demo. Reproduzido localmente reiniciando o objectstore: o probe esperou 28 s e o `tenant_check` passou em seguida.
+
 Decisões e trade-offs: [ADR 001–003](docs/decisions.md).
 
 ---

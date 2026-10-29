@@ -28,6 +28,8 @@ jobs:
           done
           docker compose logs api objectstore kafka
           exit 1
+      - name: Wait for object storage (cold start)
+        run: python simulator/wait_ready.py 240
       - run: python simulator/online_check.py
       - run: python simulator/integration_check.py
       - run: python simulator/validation_check.py

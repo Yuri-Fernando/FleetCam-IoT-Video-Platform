@@ -17,6 +17,7 @@ while ((Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 2
 }
 if (-not $ready) { throw 'API não ficou pronta; consulte docker compose logs api.' }
+Invoke-Checked 'Prontidão da API e do armazenamento S3' @('simulator/wait_ready.py')
 Invoke-Checked 'Cenário offline e replay' @('simulator/fleet.py','--seed',"$Seed",'--devices','1','--scenario','offline_reconnect','--offline-seconds',"$OfflineSeconds",'--output',"simulator/output/demo-$Seed")
 Invoke-Checked 'Falha e recuperação de SD' @('simulator/incident_check.py')
 Invoke-Checked 'Evidência e integridade' @('simulator/evidence_check.py')
