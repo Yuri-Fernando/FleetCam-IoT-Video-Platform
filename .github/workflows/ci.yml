@@ -1,0 +1,51 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - run: gradle test bootJar
+      - run: python -m unittest discover -s simulator
+      - run: python -m unittest discover -s adapters
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d --build api objectstore console jaeger
+      - name: Wait for API
+        run: |
+          for n in $(seq 1 90); do
+            if curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs api objectstore kafka
+          exit 1
+      - run: python simulator/online_check.py
+      - run: python simulator/integration_check.py
+      - run: python simulator/validation_check.py
+      - run: python simulator/tenant_check.py
+      - run: python simulator/device_lookup_check.py
+      - run: python simulator/incident_check.py
+      - run: python simulator/connectivity_check.py
+      - run: python simulator/reboot_check.py
+      - run: python simulator/lifecycle_check.py
+      - run: python simulator/tracing_check.py
+      - run: python simulator/evidence_check.py
+      - run: python simulator/evidence_reconcile_check.py
+      - run: python simulator/dlt_check.py
+      - run: python simulator/redrive_check.py
+      - run: python simulator/fault_check.py
+      - run: python simulator/decommission_replay_check.py
+      - run: python simulator/crash_check.py
+      - if: always()
+        run: docker compose logs --tail=100 api objectstore kafka
+      - if: always()
+        run: docker compose down

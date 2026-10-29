@@ -1,0 +1,23 @@
+.gradle/
+build/
+**/build/
+__pycache__/
+.env
+simulator/output/
+*.log
+*.sqlite3
+*.sqlite3-*
+frontend/node_modules/
+frontend/dist/
+.playwright-cli/
+output/
+# Material de brainstorm/escopo pessoal: não versionado
+FleetCam_Escopo.txt
+FleetCam_Escopo.zip
+*_Escopo*.txt
+*_Escopo*.zip
+# Ferramentas locais de IA e editor
+.claude/
+.aiox/
+.vscode/
+.idea/

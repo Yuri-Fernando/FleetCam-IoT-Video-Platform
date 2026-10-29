@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fleetcam.local/contracts/event-v1.json",
+  "title": "FleetCam event v1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "tenant_id", "device_id", "boot_id", "sequence_number", "event_kind", "source", "simulated", "occurred_at", "payload"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "event_id": {"type": "string", "format": "uuid"},
+    "tenant_id": {"type": "string", "enum": ["tenant-demo", "tenant-b"]},
+    "device_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "boot_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "sequence_number": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+    "event_kind": {"enum": ["device_heartbeat", "safety_event", "technical_event"]},
+    "event_type": {"type": "string"},
+    "source": {"type": "string", "minLength": 1, "maxLength": 200},
+    "simulated": {"type": "boolean"},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"}
+  },
+  "additionalProperties": true
+}

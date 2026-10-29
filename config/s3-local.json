@@ -1,0 +1,1 @@
+{"identities":[{"name":"fleetcam-lab","credentials":[{"accessKey":"fleetcam_local","secretKey":"fleetcam_local_password"}],"actions":["Admin","Read","List","Write","Tagging"]}]}

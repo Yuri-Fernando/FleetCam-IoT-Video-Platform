@@ -1,0 +1,2 @@
+FROM chrislusf/seaweedfs:3.80
+COPY config/s3-local.json /etc/seaweed/s3.json

@@ -1,0 +1,28 @@
+groups:
+  - name: fleetcam-lab
+    rules:
+      - alert: FleetCamApiUnavailable
+        expr: up{job="fleetcam"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "API indisponível ao Prometheus"}
+      - alert: FleetCamOutboxPending
+        expr: fleetcam_outbox_pending > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Outbox pendente por cinco minutos"}
+      - alert: FleetCamDeadLettersOpen
+        expr: fleetcam_deadletters_open > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Mensagens na DLT aguardam investigação"}
+      - alert: FleetCamConsumerLag
+        expr: fleetcam_kafka_consumer_lag > 100
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Projetor atrasado em mais de 100 mensagens; não indica câmera offline"}
+      - alert: FleetCamEvidencePending
+        expr: fleetcam_evidence_pending > 0
+        for: 30m
+        labels: {severity: info}
+        annotations: {summary: "Upload de evidência pendente além da janela de reconciliação"}

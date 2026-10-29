@@ -1,0 +1,5 @@
+FROM gradle:8.10.2-jdk17
+WORKDIR /app
+COPY settings.gradle.kts build.gradle.kts ./
+COPY src ./src
+RUN --mount=type=cache,target=/home/gradle/.gradle gradle --no-daemon test --tests io.fleetcam.StoragePolicyTest

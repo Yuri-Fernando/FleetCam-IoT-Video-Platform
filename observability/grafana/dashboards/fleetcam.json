@@ -1,0 +1,179 @@
+{
+  "title": "FleetCam · serviço local",
+  "uid": "fleetcam-lab",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Requisições HTTP por segundo",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"fleetcam\"}[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Memória JVM utilizada",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(jvm_memory_used_bytes{job=\"fleetcam\"})",
+          "legendFormat": "bytes"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Serviço acessível pelo Prometheus",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"fleetcam\"}",
+          "legendFormat": "up"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Outbox pendente",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 13
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_outbox_pending",
+          "legendFormat": "Outbox pendente"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Eventos não processados",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 13
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_events_unprocessed",
+          "legendFormat": "Eventos não processados"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "DLT aberta",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 13
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_deadletters_open",
+          "legendFormat": "DLT aberta"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Incidentes abertos",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 13
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_incidents_open",
+          "legendFormat": "Incidentes abertos"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Lag do consumidor Kafka (mensagens)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_kafka_consumer_lag",
+          "legendFormat": "lag"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Reentregas reconhecidas (desde o início do processo)",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 18
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_projector_redeliveries_total",
+          "legendFormat": "reentregas"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Evidências PENDING",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 18
+      },
+      "targets": [
+        {
+          "expr": "fleetcam_evidence_pending",
+          "legendFormat": "pending"
+        }
+      ]
+    }
+  ]
+}

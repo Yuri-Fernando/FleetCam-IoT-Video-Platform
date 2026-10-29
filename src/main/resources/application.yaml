@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: fleetcam
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fleetcam}
+    username: ${SPRING_DATASOURCE_USERNAME:fleetcam}
+    password: ${SPRING_DATASOURCE_PASSWORD:fleetcam_local}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+        max.block.ms: 3000
+    consumer:
+      group-id: fleetcam-projector-v1
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+      observation-enabled: true
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${FLEETCAM_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+fleetcam:
+  api-key: ${FLEETCAM_API_KEY:local-demo-key}
+  tenant-b-api-key: ${FLEETCAM_TENANT_B_API_KEY:local-tenant-b-key}
+  suspect-seconds: 35
+  offline-seconds: 65
+  evidence:
+    # Upload tickets expire after 300 s; unconfirmed uploads are reconciled after this window.
+    pending-timeout-seconds: 900
+  storage:
+    low-enter: 0.10
+    low-exit: 0.12
+    error-increases: 2
+    recovery-observations: 2

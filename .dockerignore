@@ -1,0 +1,10 @@
+.git
+.gradle
+build
+simulator/output
+**/__pycache__
+FleetCam_Escopo.zip
+FleetCam_Escopo.txt
+.playwright-cli
+frontend/node_modules
+frontend/dist
