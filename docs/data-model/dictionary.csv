@@ -1,0 +1,101 @@
+table,column,type,nullable,default,is_pk,fk_reference,description,classification
+audit_log,id,bigint,NO,nextval('audit_log_id_seq'::regclass),YES,,Sequencial do registro de auditoria.,INTERNO
+audit_log,tenant_id,text,NO,,NO,,Tenant da ação.,INTERNO
+audit_log,action,text,NO,,NO,,"Ação auditada (ex.: mudança de lifecycle, redrive).",INTERNO
+audit_log,resource_id,text,NO,,NO,,Recurso afetado.,INTERNO
+audit_log,actor,text,NO,,NO,,"Quem executou (credencial de laboratório; em produção, identidade do operador).",PESSOAL
+audit_log,occurred_at,timestamp with time zone,NO,now(),NO,,Instante da ação.,INTERNO
+dead_letters,id,uuid,NO,,YES,,UUID da dead letter.,INTERNO
+dead_letters,topic,text,NO,,NO,,Tópico Kafka de origem.,INTERNO
+dead_letters,kafka_partition,integer,NO,,NO,,Partição Kafka.,INTERNO
+dead_letters,kafka_offset,bigint,NO,,NO,,Offset Kafka (UNIQUE com tópico/partição: DLT idempotente).,INTERNO
+dead_letters,message_key,text,YES,,NO,,Chave da mensagem.,INTERNO
+dead_letters,payload,text,NO,,NO,,Mensagem que falhou (pode conter telemetria).,PESSOAL
+dead_letters,error,text,YES,,NO,,Erro do consumidor.,INTERNO
+dead_letters,status,text,NO,'OPEN'::text,NO,,OPEN ou REDRIVEN (domínio só no código; CHECK proposto na V12).,INTERNO
+dead_letters,created_at,timestamp with time zone,NO,now(),NO,,Registro da falha.,INTERNO
+dead_letters,redriven_at,timestamp with time zone,YES,,NO,,Reprocessamento manual.,INTERNO
+dead_letters,tenant_id,text,YES,,NO,,"Tenant (V8, anulável; backfill V9 só quando o payload casa com evento aceito).",INTERNO
+device_boot_sessions,tenant_id,text,NO,,YES,devices.tenant_id,Tenant (PK composta).,INTERNO
+device_boot_sessions,device_id,text,NO,,YES,devices.id,"Câmera (PK composta, FK para devices).",INTERNO
+device_boot_sessions,boot_id,text,NO,,YES,,Sessão de boot (PK composta).,INTERNO
+device_boot_sessions,first_seen_at,timestamp with time zone,NO,now(),NO,,Primeiro evento do boot.,INTERNO
+device_boot_sessions,retired_at,timestamp with time zone,YES,,NO,,Boot encerrado (substituído por outro).,INTERNO
+device_boot_sessions,firmware_version,text,YES,,NO,,Firmware naquele boot.,INTERNO
+device_state,tenant_id,text,NO,,YES,devices.tenant_id,Tenant (PK composta).,INTERNO
+device_state,device_id,text,NO,,YES,devices.id,"Câmera (PK composta, FK para devices).",INTERNO
+device_state,boot_id,text,NO,,NO,,Boot do último evento aplicado.,INTERNO
+device_state,sequence_number,bigint,NO,,NO,,Sequência do último evento aplicado (descarta eventos fora de ordem).,INTERNO
+device_state,occurred_at,timestamp with time zone,NO,,NO,,Instante do último evento aplicado.,INTERNO
+device_state,storage_state,text,NO,,NO,,Estado do cartão SD (projeção).,INTERNO
+device_state,capture_state,text,NO,,NO,,Estado de gravação (projeção).,INTERNO
+device_state,firmware_version,text,YES,,NO,,Firmware reportado no último evento.,INTERNO
+device_state,updated_at,timestamp with time zone,NO,now(),NO,,Última atualização da projeção.,INTERNO
+device_state,sd_last_errors,bigint,YES,,NO,,Contador de erros do SD no último relatório (V7).,INTERNO
+device_state,sd_error_streak,integer,NO,0,NO,,"Relatórios consecutivos com erro (histerese, V7).",INTERNO
+device_state,sd_recovery_streak,integer,NO,0,NO,,"Relatórios consecutivos sem erro (histerese, V7).",INTERNO
+devices,tenant_id,text,NO,,YES,,Cliente (frota) dono do dispositivo; parte da PK composta e de todas as FKs multitenant.,INTERNO
+devices,id,text,NO,,YES,,"Identificador da câmera dentro do tenant (único por tenant, não globalmente).",INTERNO
+devices,vehicle_id,text,NO,,NO,,Veículo onde a câmera está instalada. Associável a um motorista pela escala da frota: tratado como dado pessoal indireto.,PESSOAL
+devices,model,text,NO,,NO,,Modelo de hardware da câmera.,INTERNO
+devices,firmware_version,text,NO,,NO,,Versão de firmware declarada no provisionamento.,INTERNO
+devices,created_at,timestamp with time zone,NO,now(),NO,,Instante do provisionamento (UTC).,INTERNO
+devices,lifecycle_state,text,NO,'PROVISIONED'::text,NO,,"Ciclo de vida: PROVISIONED, ACTIVE, MAINTENANCE, DECOMMISSIONED (CHECK desde V10).",INTERNO
+evidence,id,uuid,NO,,YES,,UUID da evidência (snapshot/vídeo).,INTERNO
+evidence,tenant_id,text,NO,,NO,ingest_events.tenant_id,Tenant dono (FK composta via evento).,INTERNO
+evidence,event_id,uuid,NO,,NO,ingest_events.event_id,Evento ao qual a evidência pertence (FK composta).,INTERNO
+evidence,object_key,text,NO,,NO,,Chave do objeto no armazenamento S3 (UNIQUE global).,CONFIDENCIAL
+evidence,mime_type,text,NO,,NO,,Tipo de mídia.,INTERNO
+evidence,byte_size,bigint,NO,,NO,,Tamanho em bytes (CHECK 1..10 MiB).,INTERNO
+evidence,sha256,text,NO,,NO,,Hash de integridade do objeto (cadeia de custódia).,INTERNO
+evidence,origin,text,NO,,NO,,"Origem da evidência (dispositivo, adaptador).",INTERNO
+evidence,status,text,NO,'PENDING'::text,NO,,"PENDING, AVAILABLE, FAILED, EXPIRED (domínio só no código; CHECK proposto na V12).",INTERNO
+evidence,created_at,timestamp with time zone,NO,now(),NO,,Registro da evidência.,INTERNO
+evidence,confirmed_at,timestamp with time zone,YES,,NO,,Confirmação do upload.,INTERNO
+evidence,retention_until,timestamp with time zone,NO,(now() + '7 days'::interval),NO,,Fim da retenção (padrão now() + 7 dias): imagem pode conter pessoas e placas.,PESSOAL
+evidence,failure_reason,text,YES,,NO,,Motivo de falha na reconciliação de upload (V11).,INTERNO
+evidence,upload_requested_at,timestamp with time zone,NO,now(),NO,,"Último pedido de upload; base do reconciliador (V11, índice parcial PENDING).",INTERNO
+incident_timeline,id,bigint,NO,nextval('incident_timeline_id_seq'::regclass),YES,,Sequencial da anotação.,INTERNO
+incident_timeline,incident_id,uuid,NO,,NO,incidents.id,Incidente anotado (FK; sem índice — achado R2).,INTERNO
+incident_timeline,occurred_at,timestamp with time zone,NO,now(),NO,,Instante da anotação.,INTERNO
+incident_timeline,kind,text,NO,,NO,,"Tipo de anotação (abertura, evidência, fechamento...).",INTERNO
+incident_timeline,annotation,text,NO,,NO,,Texto da anotação.,INTERNO
+incident_timeline,event_id,uuid,YES,,NO,,"Evento relacionado (opcional, sem FK).",INTERNO
+incidents,id,uuid,NO,,YES,,UUID do incidente.,INTERNO
+incidents,tenant_id,text,NO,,NO,devices.tenant_id,Tenant do incidente.,INTERNO
+incidents,device_id,text,NO,,NO,devices.id,Câmera afetada (FK composta).,INTERNO
+incidents,type,text,NO,,NO,,"Tipo (CONNECTIVITY, STORAGE, ...). UNIQUE parcial: 1 aberto por tenant/device/tipo.",INTERNO
+incidents,status,text,NO,,NO,,OPEN ou CLOSED (domínio só no código; CHECK proposto na V12).,INTERNO
+incidents,opened_at,timestamp with time zone,NO,now(),NO,,Abertura.,INTERNO
+incidents,closed_at,timestamp with time zone,YES,,NO,,Fechamento (NULL enquanto aberto).,INTERNO
+incidents,summary,text,NO,,NO,,Resumo legível do incidente.,INTERNO
+incidents,source_event_id,uuid,YES,,NO,,Evento que originou o incidente (sem FK).,INTERNO
+ingest_events,tenant_id,text,NO,,YES,devices.tenant_id,Tenant do evento (PK composta).,INTERNO
+ingest_events,event_id,uuid,NO,,YES,,UUID do evento gerado no dispositivo; chave de idempotência por tenant.,INTERNO
+ingest_events,device_id,text,NO,,NO,devices.id,Câmera emissora (FK composta para devices).,INTERNO
+ingest_events,boot_id,text,NO,,NO,,Sessão de boot do dispositivo; reinicia a sequência.,INTERNO
+ingest_events,sequence_number,bigint,NO,,NO,,Número de sequência dentro do boot; UNIQUE com tenant/device/boot/kind detecta replay.,INTERNO
+ingest_events,event_kind,text,NO,,NO,,"Tipo do evento (heartbeat, storage_status, ...).",INTERNO
+ingest_events,payload_hash,text,NO,,NO,,SHA-256 do payload canônico: detecta reenvio do mesmo event_id com conteúdo diferente.,INTERNO
+ingest_events,payload,jsonb,NO,,NO,,Payload JSON aceito (telemetria; pode conter posição do veículo).,PESSOAL
+ingest_events,occurred_at,timestamp with time zone,NO,,NO,,Instante do evento no relógio do dispositivo.,INTERNO
+ingest_events,received_at,timestamp with time zone,NO,now(),NO,,Instante de recebimento pela API.,INTERNO
+ingest_events,processed_at,timestamp with time zone,YES,,NO,,Instante em que o projetor aplicou o evento (NULL = pendente).,INTERNO
+outbox,tenant_id,text,NO,,YES,ingest_events.tenant_id,Tenant (PK composta).,INTERNO
+outbox,event_id,uuid,NO,,YES,ingest_events.event_id,Evento a publicar no Kafka (FK composta para ingest_events).,INTERNO
+outbox,device_id,text,NO,,NO,,Câmera do evento (chave de partição Kafka).,INTERNO
+outbox,payload,text,NO,,NO,,Mensagem serializada a publicar.,PESSOAL
+outbox,created_at,timestamp with time zone,NO,now(),NO,,Inserção no outbox (ordem de publicação).,INTERNO
+outbox,delivered_at,timestamp with time zone,YES,,NO,,Confirmação de publicação; NULL = pendente (índice parcial outbox_pending).,INTERNO
+outbox,attempts,integer,NO,0,NO,,Tentativas de publicação.,INTERNO
+outbox,last_error,text,YES,,NO,,Último erro de publicação.,INTERNO
+outbox,traceparent,text,YES,,NO,,Contexto W3C Trace Context para rastreamento distribuído (V5).,INTERNO
+state_transitions,id,bigint,NO,nextval('state_transitions_id_seq'::regclass),YES,,Sequencial da transição.,INTERNO
+state_transitions,tenant_id,text,NO,,NO,,Tenant (sem FK — achado R3).,INTERNO
+state_transitions,device_id,text,NO,,NO,,Câmera (sem FK — achado R3).,INTERNO
+state_transitions,old_storage,text,YES,,NO,,Estado de armazenamento anterior.,INTERNO
+state_transitions,new_storage,text,NO,,NO,,Novo estado de armazenamento.,INTERNO
+state_transitions,old_capture,text,YES,,NO,,Estado de gravação anterior.,INTERNO
+state_transitions,new_capture,text,NO,,NO,,Novo estado de gravação.,INTERNO
+state_transitions,event_id,uuid,NO,,NO,,Evento que causou a transição.,INTERNO
+state_transitions,changed_at,timestamp with time zone,NO,now(),NO,,Instante da transição.,INTERNO

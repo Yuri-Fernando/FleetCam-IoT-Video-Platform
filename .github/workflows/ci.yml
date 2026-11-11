@@ -15,6 +15,25 @@ jobs:
       - run: gradle test bootJar
       - run: python -m unittest discover -s simulator
       - run: python -m unittest discover -s adapters
+  data-model:
+    # Flyway real V1 -> atual em postgres:16 descartável + 23 verificações de
+    # integridade/upgrade + artefatos de docs/data-model atualizados (--check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install psycopg2-binary
+      - run: python -m unittest discover -s scripts/data-model
+      - run: python scripts/data-model/migration_lab.py --check --report lab-report.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-model-lab-report
+          path: lab-report.json
+          if-no-files-found: ignore
   integration:
     runs-on: ubuntu-latest
     steps:
