@@ -7,7 +7,8 @@
 ![testes Kotlin](https://img.shields.io/badge/testes%20Kotlin-3%2F3%20(Testcontainers)-0a8a0a)
 ![crash SIGKILL](https://img.shields.io/badge/SIGKILL%20no%20backlog-300%2F300%20projetados%201x-0a8a0a)
 ![rajada 500](https://img.shields.io/badge/rajada%20500%20eventos-62%20s%20%E2%86%92%2042%20s-c8742a)
-![versão](https://img.shields.io/badge/vers%C3%A3o-v0.2-4a5563)
+![laboratório de migração](https://img.shields.io/badge/Flyway%20V1%E2%86%92V11-23%2F23%20verifica%C3%A7%C3%B5es-0a8a0a)
+![versão](https://img.shields.io/badge/vers%C3%A3o-v0.3-4a5563)
 ![license](https://img.shields.io/badge/license-MIT-4a5563)
 
 ## 🟡 Status
@@ -21,6 +22,7 @@
 | DLT e redrive | ✅ | `dlt_check`, `redrive_check` |
 | Evidências S3 | ✅ | `evidence_check`, `evidence_reconcile_check` |
 | Observabilidade | ✅ | `tracing_check`, `promtool` (5 regras), Grafana (10 painéis via API) |
+| Modelagem de dados (v0.3) | ✅ | [docs/data-model](docs/data-model/README.md): modelo conceitual/lógico/físico, dicionário de 100 colunas, revisão de DDL; `migration_lab.py` aplica Flyway V1→V11 em banco descartável com 23 verificações |
 | Desempenho | 🟡 | [benchmark](docs/benchmark.md): um host, um device |
 | Integração VisionBrain | 🟡 | `adapters/visionbrain_check.py` (depende do projeto vizinho) |
 | CI remoto | ✅ | [build + integração verdes](https://github.com/Yuri-Fernando/FleetCam-IoT-Video-Platform/actions/runs/40957044096) no GitHub Actions (Ubuntu) |
@@ -179,8 +181,36 @@ Os testes não usam mocks do caminho principal: falam com a API real, o PostgreS
 | 17 checks de integração (Compose) | ingestão, validação, tenants, ciclo de vida, conectividade, SD, reboot, DLT, redrive, Kafka fora, SIGKILL, tracing, evidência, reconciliação | 17/17 |
 | `scripts/demo.ps1` | sequência completa com comando único | passou (`-OfflineSeconds 0` e, em execução separada, 75 s) |
 | `promtool check rules` | regras de alerta válidas | 5 regras |
+| `scripts/data-model/migration_lab.py` (v0.3) | Flyway real (`flyway/flyway:10.10.0`) aplica V1→V11 uma a uma em `postgres:16` descartável com dados semeados em V1/V7/V10; backfills V9/V10/V11, FK composta multitenant, UNIQUE parcial, CHECKs, uso do índice parcial do outbox, proposta V12 com rollback | 23/23 |
+| `test_schema_tools.py` (v0.3) | diff de snapshots, cobertura do dicionário, FKs compostas no snapshot versionado | 8/8 |
 
 **Oráculo independente.** O simulador gera `ground_truth.jsonl` e `expected_results.json` a partir do cenário e da seed, sem consultar a API; os checks comparam esse esperado com o estado projetado no banco. No crash, o oráculo é aritmético: 300 eventos aceitos ⇒ 300 linhas processadas, `sequence_number` final 300, exatamente uma transição de estado.
+
+---
+
+## 🗄️ Modelagem de dados (v0.3)
+
+Segunda evidência de modelagem do portfólio (a principal, warehouse dimensional, está
+no [RetentIQ](https://github.com/Yuri-Fernando/retentiq)). Aqui o foco é **modelo
+operacional multitenant** com migrações versionadas. Nenhuma migração histórica e
+nenhum código Kotlin foi alterado.
+
+| Documento | O que mostra |
+|---|---|
+| [conceitual](docs/data-model/conceptual.md) · [lógico](docs/data-model/logical.md) · [físico](docs/data-model/physical.md) | entidades e regras; PK/FK compostas com `tenant_id`; tipos e restrições |
+| [dicionário](docs/data-model/dictionary.csv) | 100 colunas extraídas do catálogo após V11 + descrição e classificação ([descriptions.json](docs/data-model/descriptions.json)) |
+| [revisão de DDL](docs/data-model/ddl-review.md) | pontos fortes e achados R1–R7 (status sem CHECK, FK sem índice, `state_transitions` sem FK, backfill de tabela inteira na V11) |
+| [evolução V1→V11](docs/data-model/schema-evolution.md) · [gerado](docs/data-model/generated/schema-evolution.md) | 4→11 tabelas, 34→100 colunas, 3→7 FKs; todas as migrações aditivas |
+| [proposta V12](docs/data-model/proposals/) | correções de R1–R3 com rollback, testadas em banco descartável e **não** aplicadas pelo app |
+
+Dois exemplos medidos no laboratório:
+
+- **Índice parcial do outbox** (`WHERE delivered_at IS NULL`): 16 KiB contra 152 KiB de
+  um índice comum equivalente (20.006 linhas, 6 pendentes), e o planejador o usa na
+  consulta de polling real do app.
+- **UNIQUE parcial de incidentes** (`WHERE status='OPEN'`): segundo incidente aberto do
+  mesmo tipo é rejeitado; o `INSERT ... ON CONFLICT DO NOTHING` do app não duplica;
+  depois de fechado, um novo pode abrir (histórico preservado).
 
 ---
 
@@ -339,6 +369,7 @@ v1.0  rollout de firmware simulado com detecção de regressão por coorte
 |---|---|---|
 | v0.1 | 27–29/10/2026 | Núcleo Kotlin/Spring, outbox, Kafka, projeção idempotente, DLT/redrive, saúde de device e incidentes, evidências S3, VisionBrain adapter, console React, Prometheus/Grafana/Jaeger, 15 checks de integração |
 | v0.2 | 29/10/2026 | Reconciliação de upload interrompido (ADR 002); lag do consumidor e contador de reentregas; `crash_check` com SIGKILL; commit do outbox por lote (ADR 003) com antes/depois medido; correção do fallback IPv6 dos clientes; DNS dinâmico no nginx do console; README e licença MIT |
+| v0.3 | 10/11/2026 | Modelagem de dados documentada (conceitual/lógico/físico, dicionário de 100 colunas, revisão de DDL, evolução V1→V11); laboratório `migration_lab.py` com Flyway real e 23 verificações; proposta V12 com rollback; job `data-model` no CI. Ver [CHANGELOG](CHANGELOG.md) |
 
 Registro de validação por data: [docs/validation.md](docs/validation.md). O README anterior está em [docs/archive/README_v0.1.md](docs/archive/README_v0.1.md).
 
@@ -346,7 +377,14 @@ Registro de validação por data: [docs/validation.md](docs/validation.md). O RE
 
 ## 🔮 Próximos Passos
 
-**Concluídos nesta versão ✅**
+**Concluídos na v0.3 ✅**
+- Modelagem de dados documentada e laboratório de upgrade V1→V11 com 23 verificações no CI.
+
+**Próximos de modelagem**
+- Transformar a proposta V12 em migração real (CHECKs de status, índice da timeline, FK de `state_transitions`).
+- Backfill da V11 em lotes como padrão para tabelas grandes (achado R4).
+
+**Concluídos na v0.2 ✅**
 - Gate M3: upload interrompido detectado, reconciliado e reenviável.
 - Gate M1: crash abrupto do processo com projeção única.
 - Gate M5: lag medido e comparação antes/depois com causa raiz.
@@ -424,6 +462,11 @@ py -3.10 simulator/crash_check.py               # para o Kafka e aplica SIGKILL 
 # Benchmark
 py -3.10 simulator/benchmark.py --count 500 --workers 8
 
+# Modelagem de dados: unitários (sem Docker) e laboratório Flyway V1→V11 (Docker; pip install psycopg2-binary)
+py -3.10 -m unittest discover -s scripts/data-model
+py -3.10 scripts/data-model/migration_lab.py           # regrava docs/data-model/generated e dictionary.csv
+py -3.10 scripts/data-model/migration_lab.py --check   # como no CI: falha se os artefatos estiverem defasados
+
 # Testes Kotlin (inclui Testcontainers) sem JDK local
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}:/app -w /app `
   -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal gradle:8.10.2-jdk17 gradle --no-daemon test bootJar
@@ -434,6 +477,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}:/app -w /
 | Windows 11 + Docker Desktop | verificado nesta revisão (tudo acima) |
 | GitHub Actions (Ubuntu) | [verde](https://github.com/Yuri-Fernando/FleetCam-IoT-Video-Platform/actions/runs/40957044096): build + testes Kotlin (Testcontainers) + unitários Python, e job de integração com o Compose e os 17 checks |
 | Linux local | não verificado nesta revisão; os comandos `python` equivalem aos `py -3.10` |
+| v0.3 (10/11/2026) | `migration_lab.py` 23/23 e unitários Python verdes no Windows; testes Kotlin **não** reexecutados (nenhum código Kotlin ou migração foi alterado); job `data-model` verificado após o push |
 
 `fault_check`, `decommission_replay_check` e `crash_check` param serviços deste Compose; `redrive_check` cria e remove uma falha temporária no banco. Execute-os apenas no laboratório.
 
