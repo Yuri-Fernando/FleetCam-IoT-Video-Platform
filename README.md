@@ -289,6 +289,34 @@ Todas as execuções processaram 500/500 com zero erros. Percentis pelo método 
 
 **Como ler.** Um único device serializa a ingestão pelo lock da linha do device, então estes números não estimam a capacidade de uma frota. O custo de ~55 ms por commit é do volume do Docker Desktop deste host e não se transfere para outro ambiente. Nenhum número aqui é SLO.
 
+### Modelagem de dados — laboratório de migração (v0.3, 10/11/2026)
+
+`scripts/data-model/migration_lab.py` com PostgreSQL 16.15 e `flyway/flyway:10.10.0`, banco descartável. Mesmo resultado localmente e no job `data-model` do GitHub Actions.
+
+**Evolução medida no catálogo**
+
+| | V1 | V11 |
+|---|---:|---:|
+| Tabelas | 4 | 11 |
+| Colunas | 34 | 100 |
+| FKs (6 de 7 compostas com `tenant_id`) | 3 | 7 |
+| CHECKs | 0 | 2 |
+| Índices fora PK/UNIQUE | 2 | 7 |
+
+**Verificações (23/23)**
+
+| Grupo | Verificação | Resultado |
+|---|---|---|
+| Upgrade | 11 migrações com sucesso no `flyway_schema_history`; dados semeados em V1 preservados após V11 | ✅ |
+| Backfills | V7 (defaults 0), V9 (só a dead letter cujo payload casa com evento aceito ganha tenant; JSON inválido não derruba a migração), V10 (`PROVISIONED`), V11 (`upload_requested_at = created_at`) | ✅ 4/4 |
+| Multitenant | evento do tenant B apontando para device do tenant A | ✅ rejeitado (`ForeignKeyViolation`) |
+| Idempotência | replay da mesma sequência de evento | ✅ rejeitado (`UniqueViolation`) |
+| UNIQUE parcial de incidentes | 2º OPEN rejeitado · `ON CONFLICT DO NOTHING` do app sem efeito · outro tipo aceito · reabre após fechar | ✅ 4/4 |
+| CHECKs | `byte_size` 0 e > 10 MiB · `lifecycle_state` fora do domínio | ✅ 3/3 rejeitados |
+| Índice parcial do outbox | usado pelo polling real do app; **16 KiB** contra **152 KiB** de um índice comum (20.006 linhas, 6 pendentes) | ✅ 2/2 |
+| Proposta V12 | aplica sobre V11 · constraints validadas · rejeita status inválido · idempotente · rollback volta ao V11 | ✅ 5/5 |
+| Dicionário | 100 de 100 colunas descritas e classificadas | ✅ |
+
 ---
 
 ## 🖼️ Evidências
@@ -520,7 +548,9 @@ O check integrado analisa um quadro preto sintético pelas regras reais de **qua
 ├── config/                        # SeaweedFS S3 local
 ├── sql/investigation.sql          # consultas de backlog e coorte de firmware
 ├── scripts/demo.ps1               # demonstração com um comando
+├── scripts/data-model/            # laboratório Flyway V1→V11, ferramentas de catálogo, testes
 ├── docs/                          # ADRs, validação, benchmark, runbook, SLO, ameaças, contrato, imagens
+│   └── data-model/                # modelos, dicionário, revisão de DDL, evolução, proposta V12, gerados
 ├── compose.yaml · Dockerfile · Dockerfile.test · build.gradle.kts
 └── .github/workflows/ci.yml
 ```
@@ -541,6 +571,8 @@ O check integrado analisa um quadro preto sintético pelas regras reais de **qua
 | [docs/threats.md](docs/threats.md) | ativos, fronteiras, ameaças e lacunas do laboratório |
 | [docs/contract-v1.schema.json](docs/contract-v1.schema.json) | contrato do envelope de evento |
 | [sql/investigation.sql](sql/investigation.sql) | consultas de backlog e de estado por firmware |
+| [docs/data-model/](docs/data-model/README.md) | modelo conceitual/lógico/físico, dicionário (100 colunas), revisão de DDL R1–R7, evolução V1→V11, proposta V12 |
+| [CHANGELOG.md](CHANGELOG.md) | mudanças por versão |
 
 ---
 
@@ -554,13 +586,14 @@ O check integrado analisa um quadro preto sintético pelas regras reais de **qua
 - **Mídia.** Sem vídeo contínuo, streaming ou captura física.
 - **Contrato v1** documenta o formato, mas não é executado como validador JSON Schema.
 - **Histerese** existe só para SD; captura e conectividade usam regras simples.
+- **Modelo de dados.** Status de `incidents`/`evidence`/`dead_letters` sem CHECK, `incident_timeline.incident_id` sem índice e `state_transitions` sem FK (achados R1–R3): corrigidos só na **proposta** V12, ainda não aplicada pelo app.
 - **Não verificado nesta revisão:** Linux local fora do CI; `visionbrain_check` (depende do projeto vizinho; passou numa revisão anterior registrada em [validation](docs/validation.md)); inspeção visual do Grafana além da captura acima.
 
 ---
 
 ## Status
 
-🟡 **MVP técnico funcional — v0.2.** Os gates M1, M3 e M5 estão fechados com evidência local e no GitHub Actions (17/17 checks, 3/3 testes Kotlin, crash SIGKILL, benchmark antes/depois); M2 e M4 estão parciais; escala com vários devices ainda não foi comprovada.
+🟡 **MVP técnico funcional — v0.3.** Os gates M1, M3 e M5 estão fechados com evidência local e no GitHub Actions (17/17 checks, 3/3 testes Kotlin, crash SIGKILL, benchmark antes/depois); a modelagem de dados está documentada e o upgrade V1→V11 é testado em banco descartável (23/23); M2 e M4 estão parciais; escala com vários devices ainda não foi comprovada.
 
 ---
 
@@ -579,6 +612,7 @@ Projeto de portfólio pessoal, desenvolvido de forma independente. **Não é afi
 | [OOP_Project (VisionGuard)](https://github.com/Yuri-Fernando/OOP_Project) | visão em tempo real por eventos relevantes; referência, não dependência |
 | [RealTime-ML-Inference-Lab](https://github.com/Yuri-Fernando/RealTime-ML-Inference-Lab) | padrões de observabilidade e telemetria reaproveitados como referência |
 | [AI-Network-Optimizer](https://github.com/Yuri-Fernando/AI-Network-Optimizer) | detecção de anomalias em métricas; padrões transferíveis para saúde de device |
+| [RetentIQ](https://github.com/Yuri-Fernando/RetentIQ) | evidência principal de modelagem de dados (warehouse dimensional, dicionário, engenharia reversa, controle de mudanças); o FleetCam complementa com o modelo operacional multitenant |
 | [Argus](https://github.com/Yuri-Fernando/Argus) | referência de consulta analítica e warehouse |
 | [Enterprise-Automation](https://github.com/Yuri-Fernando/Enterprise-Automation) | referência de CI/CD, observabilidade e segurança |
 
