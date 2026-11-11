@@ -1,0 +1,165 @@
+// Gerado por scripts/data-model/migration_lab.py a partir do catálogo do PostgreSQL
+// após aplicar TODAS as migrações Flyway. Não editar à mão.
+
+Table audit_log {
+  id bigint [pk]
+  tenant_id text [not null]
+  action text [not null]
+  resource_id text [not null]
+  actor text [not null]
+  occurred_at timestamp_with_time_zone [not null]
+}
+
+Table dead_letters {
+  id uuid [pk]
+  topic text [not null]
+  kafka_partition integer [not null]
+  kafka_offset bigint [not null]
+  message_key text
+  payload text [not null]
+  error text
+  status text [not null]
+  created_at timestamp_with_time_zone [not null]
+  redriven_at timestamp_with_time_zone
+  tenant_id text
+  indexes {
+    (topic, kafka_partition, kafka_offset) [unique]
+  }
+}
+
+Table device_boot_sessions {
+  tenant_id text [not null]
+  device_id text [not null]
+  boot_id text [not null]
+  first_seen_at timestamp_with_time_zone [not null]
+  retired_at timestamp_with_time_zone
+  firmware_version text
+  indexes {
+    (tenant_id, device_id, boot_id) [pk]
+  }
+}
+
+Table device_state {
+  tenant_id text [not null]
+  device_id text [not null]
+  boot_id text [not null]
+  sequence_number bigint [not null]
+  occurred_at timestamp_with_time_zone [not null]
+  storage_state text [not null]
+  capture_state text [not null]
+  firmware_version text
+  updated_at timestamp_with_time_zone [not null]
+  sd_last_errors bigint
+  sd_error_streak integer [not null]
+  sd_recovery_streak integer [not null]
+  indexes {
+    (tenant_id, device_id) [pk]
+  }
+}
+
+Table devices {
+  tenant_id text [not null]
+  id text [not null]
+  vehicle_id text [not null]
+  model text [not null]
+  firmware_version text [not null]
+  created_at timestamp_with_time_zone [not null]
+  lifecycle_state text [not null]
+  indexes {
+    (tenant_id, id) [pk]
+  }
+}
+
+Table evidence {
+  id uuid [pk]
+  tenant_id text [not null]
+  event_id uuid [not null]
+  object_key text [not null]
+  mime_type text [not null]
+  byte_size bigint [not null]
+  sha256 text [not null]
+  origin text [not null]
+  status text [not null]
+  created_at timestamp_with_time_zone [not null]
+  confirmed_at timestamp_with_time_zone
+  retention_until timestamp_with_time_zone [not null]
+  failure_reason text
+  upload_requested_at timestamp_with_time_zone [not null]
+  indexes {
+    (object_key) [unique]
+  }
+}
+
+Table incident_timeline {
+  id bigint [pk]
+  incident_id uuid [not null]
+  occurred_at timestamp_with_time_zone [not null]
+  kind text [not null]
+  annotation text [not null]
+  event_id uuid
+}
+
+Table incidents {
+  id uuid [pk]
+  tenant_id text [not null]
+  device_id text [not null]
+  type text [not null]
+  status text [not null]
+  opened_at timestamp_with_time_zone [not null]
+  closed_at timestamp_with_time_zone
+  summary text [not null]
+  source_event_id uuid
+}
+
+Table ingest_events {
+  tenant_id text [not null]
+  event_id uuid [not null]
+  device_id text [not null]
+  boot_id text [not null]
+  sequence_number bigint [not null]
+  event_kind text [not null]
+  payload_hash text [not null]
+  payload jsonb [not null]
+  occurred_at timestamp_with_time_zone [not null]
+  received_at timestamp_with_time_zone [not null]
+  processed_at timestamp_with_time_zone
+  indexes {
+    (tenant_id, event_id) [pk]
+    (tenant_id, device_id, boot_id, sequence_number, event_kind) [unique]
+  }
+}
+
+Table outbox {
+  tenant_id text [not null]
+  event_id uuid [not null]
+  device_id text [not null]
+  payload text [not null]
+  created_at timestamp_with_time_zone [not null]
+  delivered_at timestamp_with_time_zone
+  attempts integer [not null]
+  last_error text
+  traceparent text
+  indexes {
+    (tenant_id, event_id) [pk]
+  }
+}
+
+Table state_transitions {
+  id bigint [pk]
+  tenant_id text [not null]
+  device_id text [not null]
+  old_storage text
+  new_storage text [not null]
+  old_capture text
+  new_capture text [not null]
+  event_id uuid [not null]
+  changed_at timestamp_with_time_zone [not null]
+}
+
+Ref: device_boot_sessions.(tenant_id, device_id) > devices.(tenant_id, id)
+Ref: device_state.(tenant_id, device_id) > devices.(tenant_id, id)
+Ref: evidence.(tenant_id, event_id) > ingest_events.(tenant_id, event_id)
+Ref: incident_timeline.incident_id > incidents.id
+Ref: incidents.(tenant_id, device_id) > devices.(tenant_id, id)
+Ref: ingest_events.(tenant_id, device_id) > devices.(tenant_id, id)
+Ref: outbox.(tenant_id, event_id) > ingest_events.(tenant_id, event_id)

@@ -1,0 +1,882 @@
+{
+  "tables": {
+    "audit_log": {
+      "checks": [],
+      "columns": [
+        {
+          "default": "nextval('audit_log_id_seq'::regclass)",
+          "name": "id",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "action",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "resource_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "actor",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "occurred_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique": []
+    },
+    "dead_letters": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "topic",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "kafka_partition",
+          "nullable": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "name": "kafka_offset",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "message_key",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "payload",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "error",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": "'OPEN'::text",
+          "name": "status",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "created_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "redriven_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": true,
+          "type": "text"
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX dead_letters_tenant ON public.dead_letters USING btree (tenant_id, created_at DESC)",
+          "name": "dead_letters_tenant",
+          "predicate": null,
+          "unique": false
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [
+        [
+          "topic",
+          "kafka_partition",
+          "kafka_offset"
+        ]
+      ]
+    },
+    "device_boot_sessions": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "boot_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "first_seen_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "retired_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "firmware_version",
+          "nullable": true,
+          "type": "text"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "device_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "id"
+          ],
+          "ref_table": "devices"
+        }
+      ],
+      "indexes": [],
+      "primary_key": [
+        "tenant_id",
+        "device_id",
+        "boot_id"
+      ],
+      "unique": []
+    },
+    "device_state": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "boot_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "sequence_number",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "occurred_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "storage_state",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "capture_state",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "firmware_version",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "updated_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "sd_last_errors",
+          "nullable": true,
+          "type": "bigint"
+        },
+        {
+          "default": "0",
+          "name": "sd_error_streak",
+          "nullable": false,
+          "type": "integer"
+        },
+        {
+          "default": "0",
+          "name": "sd_recovery_streak",
+          "nullable": false,
+          "type": "integer"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "device_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "id"
+          ],
+          "ref_table": "devices"
+        }
+      ],
+      "indexes": [],
+      "primary_key": [
+        "tenant_id",
+        "device_id"
+      ],
+      "unique": []
+    },
+    "devices": {
+      "checks": [
+        "CHECK ((lifecycle_state = ANY (ARRAY['PROVISIONED'::text, 'ACTIVE'::text, 'MAINTENANCE'::text, 'DECOMMISSIONED'::text])))"
+      ],
+      "columns": [
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "vehicle_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "model",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "firmware_version",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "created_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": "'PROVISIONED'::text",
+          "name": "lifecycle_state",
+          "nullable": false,
+          "type": "text"
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "primary_key": [
+        "tenant_id",
+        "id"
+      ],
+      "unique": []
+    },
+    "evidence": {
+      "checks": [
+        "CHECK (((byte_size > 0) AND (byte_size <= 10485760)))"
+      ],
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "event_id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "object_key",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "mime_type",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "byte_size",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "sha256",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "origin",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "'PENDING'::text",
+          "name": "status",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "created_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "confirmed_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": "(now() + '7 days'::interval)",
+          "name": "retention_until",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "failure_reason",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "upload_requested_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "event_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "event_id"
+          ],
+          "ref_table": "ingest_events"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX evidence_pending_requested ON public.evidence USING btree (upload_requested_at) WHERE (status = 'PENDING'::text)",
+          "name": "evidence_pending_requested",
+          "predicate": "(status = 'PENDING'::text)",
+          "unique": false
+        },
+        {
+          "definition": "CREATE INDEX evidence_tenant_event ON public.evidence USING btree (tenant_id, event_id)",
+          "name": "evidence_tenant_event",
+          "predicate": null,
+          "unique": false
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [
+        [
+          "object_key"
+        ]
+      ]
+    },
+    "incident_timeline": {
+      "checks": [],
+      "columns": [
+        {
+          "default": "nextval('incident_timeline_id_seq'::regclass)",
+          "name": "id",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "incident_id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": "now()",
+          "name": "occurred_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "kind",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "annotation",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "event_id",
+          "nullable": true,
+          "type": "uuid"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "incident_id"
+          ],
+          "ref_columns": [
+            "id"
+          ],
+          "ref_table": "incidents"
+        }
+      ],
+      "indexes": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique": []
+    },
+    "incidents": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "type",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "status",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "opened_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "closed_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "summary",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "source_event_id",
+          "nullable": true,
+          "type": "uuid"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "device_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "id"
+          ],
+          "ref_table": "devices"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX incidents_tenant_status ON public.incidents USING btree (tenant_id, status, opened_at DESC)",
+          "name": "incidents_tenant_status",
+          "predicate": null,
+          "unique": false
+        },
+        {
+          "definition": "CREATE UNIQUE INDEX one_open_incident_per_kind ON public.incidents USING btree (tenant_id, device_id, type) WHERE (status = 'OPEN'::text)",
+          "name": "one_open_incident_per_kind",
+          "predicate": "(status = 'OPEN'::text)",
+          "unique": true
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": []
+    },
+    "ingest_events": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "event_id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "boot_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "sequence_number",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "event_kind",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "payload_hash",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "payload",
+          "nullable": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "name": "occurred_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": "now()",
+          "name": "received_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "processed_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "device_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "id"
+          ],
+          "ref_table": "devices"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX ingest_device_time ON public.ingest_events USING btree (tenant_id, device_id, received_at DESC)",
+          "name": "ingest_device_time",
+          "predicate": null,
+          "unique": false
+        }
+      ],
+      "primary_key": [
+        "tenant_id",
+        "event_id"
+      ],
+      "unique": [
+        [
+          "tenant_id",
+          "device_id",
+          "boot_id",
+          "sequence_number",
+          "event_kind"
+        ]
+      ]
+    },
+    "outbox": {
+      "checks": [],
+      "columns": [
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "event_id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "payload",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": "now()",
+          "name": "created_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "name": "delivered_at",
+          "nullable": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": "0",
+          "name": "attempts",
+          "nullable": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "name": "last_error",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "traceparent",
+          "nullable": true,
+          "type": "text"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "tenant_id",
+            "event_id"
+          ],
+          "ref_columns": [
+            "tenant_id",
+            "event_id"
+          ],
+          "ref_table": "ingest_events"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX outbox_pending ON public.outbox USING btree (created_at) WHERE (delivered_at IS NULL)",
+          "name": "outbox_pending",
+          "predicate": "(delivered_at IS NULL)",
+          "unique": false
+        }
+      ],
+      "primary_key": [
+        "tenant_id",
+        "event_id"
+      ],
+      "unique": []
+    },
+    "state_transitions": {
+      "checks": [],
+      "columns": [
+        {
+          "default": "nextval('state_transitions_id_seq'::regclass)",
+          "name": "id",
+          "nullable": false,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "name": "tenant_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "device_id",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "old_storage",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "new_storage",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "old_capture",
+          "nullable": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "new_capture",
+          "nullable": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "name": "event_id",
+          "nullable": false,
+          "type": "uuid"
+        },
+        {
+          "default": "now()",
+          "name": "changed_at",
+          "nullable": false,
+          "type": "timestamp with time zone"
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique": []
+    }
+  }
+}

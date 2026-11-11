@@ -1,0 +1,125 @@
+{
+  "_comment": "Metadados semânticos do dicionário: {tabela: {coluna: [descrição, classificação]}}. Tipos, nulidade, PK e FK vêm do catálogo do PostgreSQL após V1..V11 (scripts/data-model/migration_lab.py). Classificações: PUBLICO, INTERNO, CONFIDENCIAL, PESSOAL, SEGREDO_TECNICO.",
+  "devices": {
+    "tenant_id": ["Cliente (frota) dono do dispositivo; parte da PK composta e de todas as FKs multitenant.", "INTERNO"],
+    "id": ["Identificador da câmera dentro do tenant (único por tenant, não globalmente).", "INTERNO"],
+    "vehicle_id": ["Veículo onde a câmera está instalada. Associável a um motorista pela escala da frota: tratado como dado pessoal indireto.", "PESSOAL"],
+    "model": ["Modelo de hardware da câmera.", "INTERNO"],
+    "firmware_version": ["Versão de firmware declarada no provisionamento.", "INTERNO"],
+    "created_at": ["Instante do provisionamento (UTC).", "INTERNO"],
+    "lifecycle_state": ["Ciclo de vida: PROVISIONED, ACTIVE, MAINTENANCE, DECOMMISSIONED (CHECK desde V10).", "INTERNO"]
+  },
+  "ingest_events": {
+    "tenant_id": ["Tenant do evento (PK composta).", "INTERNO"],
+    "event_id": ["UUID do evento gerado no dispositivo; chave de idempotência por tenant.", "INTERNO"],
+    "device_id": ["Câmera emissora (FK composta para devices).", "INTERNO"],
+    "boot_id": ["Sessão de boot do dispositivo; reinicia a sequência.", "INTERNO"],
+    "sequence_number": ["Número de sequência dentro do boot; UNIQUE com tenant/device/boot/kind detecta replay.", "INTERNO"],
+    "event_kind": ["Tipo do evento (heartbeat, storage_status, ...).", "INTERNO"],
+    "payload_hash": ["SHA-256 do payload canônico: detecta reenvio do mesmo event_id com conteúdo diferente.", "INTERNO"],
+    "payload": ["Payload JSON aceito (telemetria; pode conter posição do veículo).", "PESSOAL"],
+    "occurred_at": ["Instante do evento no relógio do dispositivo.", "INTERNO"],
+    "received_at": ["Instante de recebimento pela API.", "INTERNO"],
+    "processed_at": ["Instante em que o projetor aplicou o evento (NULL = pendente).", "INTERNO"]
+  },
+  "outbox": {
+    "tenant_id": ["Tenant (PK composta).", "INTERNO"],
+    "event_id": ["Evento a publicar no Kafka (FK composta para ingest_events).", "INTERNO"],
+    "device_id": ["Câmera do evento (chave de partição Kafka).", "INTERNO"],
+    "payload": ["Mensagem serializada a publicar.", "PESSOAL"],
+    "created_at": ["Inserção no outbox (ordem de publicação).", "INTERNO"],
+    "delivered_at": ["Confirmação de publicação; NULL = pendente (índice parcial outbox_pending).", "INTERNO"],
+    "attempts": ["Tentativas de publicação.", "INTERNO"],
+    "last_error": ["Último erro de publicação.", "INTERNO"],
+    "traceparent": ["Contexto W3C Trace Context para rastreamento distribuído (V5).", "INTERNO"]
+  },
+  "device_state": {
+    "tenant_id": ["Tenant (PK composta).", "INTERNO"],
+    "device_id": ["Câmera (PK composta, FK para devices).", "INTERNO"],
+    "boot_id": ["Boot do último evento aplicado.", "INTERNO"],
+    "sequence_number": ["Sequência do último evento aplicado (descarta eventos fora de ordem).", "INTERNO"],
+    "occurred_at": ["Instante do último evento aplicado.", "INTERNO"],
+    "storage_state": ["Estado do cartão SD (projeção).", "INTERNO"],
+    "capture_state": ["Estado de gravação (projeção).", "INTERNO"],
+    "firmware_version": ["Firmware reportado no último evento.", "INTERNO"],
+    "updated_at": ["Última atualização da projeção.", "INTERNO"],
+    "sd_last_errors": ["Contador de erros do SD no último relatório (V7).", "INTERNO"],
+    "sd_error_streak": ["Relatórios consecutivos com erro (histerese, V7).", "INTERNO"],
+    "sd_recovery_streak": ["Relatórios consecutivos sem erro (histerese, V7).", "INTERNO"]
+  },
+  "incidents": {
+    "id": ["UUID do incidente.", "INTERNO"],
+    "tenant_id": ["Tenant do incidente.", "INTERNO"],
+    "device_id": ["Câmera afetada (FK composta).", "INTERNO"],
+    "type": ["Tipo (CONNECTIVITY, STORAGE, ...). UNIQUE parcial: 1 aberto por tenant/device/tipo.", "INTERNO"],
+    "status": ["OPEN ou CLOSED (domínio só no código; CHECK proposto na V12).", "INTERNO"],
+    "opened_at": ["Abertura.", "INTERNO"],
+    "closed_at": ["Fechamento (NULL enquanto aberto).", "INTERNO"],
+    "summary": ["Resumo legível do incidente.", "INTERNO"],
+    "source_event_id": ["Evento que originou o incidente (sem FK).", "INTERNO"]
+  },
+  "incident_timeline": {
+    "id": ["Sequencial da anotação.", "INTERNO"],
+    "incident_id": ["Incidente anotado (FK; sem índice — achado R2).", "INTERNO"],
+    "occurred_at": ["Instante da anotação.", "INTERNO"],
+    "kind": ["Tipo de anotação (abertura, evidência, fechamento...).", "INTERNO"],
+    "annotation": ["Texto da anotação.", "INTERNO"],
+    "event_id": ["Evento relacionado (opcional, sem FK).", "INTERNO"]
+  },
+  "state_transitions": {
+    "id": ["Sequencial da transição.", "INTERNO"],
+    "tenant_id": ["Tenant (sem FK — achado R3).", "INTERNO"],
+    "device_id": ["Câmera (sem FK — achado R3).", "INTERNO"],
+    "old_storage": ["Estado de armazenamento anterior.", "INTERNO"],
+    "new_storage": ["Novo estado de armazenamento.", "INTERNO"],
+    "old_capture": ["Estado de gravação anterior.", "INTERNO"],
+    "new_capture": ["Novo estado de gravação.", "INTERNO"],
+    "event_id": ["Evento que causou a transição.", "INTERNO"],
+    "changed_at": ["Instante da transição.", "INTERNO"]
+  },
+  "evidence": {
+    "id": ["UUID da evidência (snapshot/vídeo).", "INTERNO"],
+    "tenant_id": ["Tenant dono (FK composta via evento).", "INTERNO"],
+    "event_id": ["Evento ao qual a evidência pertence (FK composta).", "INTERNO"],
+    "object_key": ["Chave do objeto no armazenamento S3 (UNIQUE global).", "CONFIDENCIAL"],
+    "mime_type": ["Tipo de mídia.", "INTERNO"],
+    "byte_size": ["Tamanho em bytes (CHECK 1..10 MiB).", "INTERNO"],
+    "sha256": ["Hash de integridade do objeto (cadeia de custódia).", "INTERNO"],
+    "origin": ["Origem da evidência (dispositivo, adaptador).", "INTERNO"],
+    "status": ["PENDING, AVAILABLE, FAILED, EXPIRED (domínio só no código; CHECK proposto na V12).", "INTERNO"],
+    "created_at": ["Registro da evidência.", "INTERNO"],
+    "confirmed_at": ["Confirmação do upload.", "INTERNO"],
+    "retention_until": ["Fim da retenção (padrão now() + 7 dias): imagem pode conter pessoas e placas.", "PESSOAL"],
+    "failure_reason": ["Motivo de falha na reconciliação de upload (V11).", "INTERNO"],
+    "upload_requested_at": ["Último pedido de upload; base do reconciliador (V11, índice parcial PENDING).", "INTERNO"]
+  },
+  "dead_letters": {
+    "id": ["UUID da dead letter.", "INTERNO"],
+    "topic": ["Tópico Kafka de origem.", "INTERNO"],
+    "kafka_partition": ["Partição Kafka.", "INTERNO"],
+    "kafka_offset": ["Offset Kafka (UNIQUE com tópico/partição: DLT idempotente).", "INTERNO"],
+    "message_key": ["Chave da mensagem.", "INTERNO"],
+    "payload": ["Mensagem que falhou (pode conter telemetria).", "PESSOAL"],
+    "error": ["Erro do consumidor.", "INTERNO"],
+    "status": ["OPEN ou REDRIVEN (domínio só no código; CHECK proposto na V12).", "INTERNO"],
+    "created_at": ["Registro da falha.", "INTERNO"],
+    "redriven_at": ["Reprocessamento manual.", "INTERNO"],
+    "tenant_id": ["Tenant (V8, anulável; backfill V9 só quando o payload casa com evento aceito).", "INTERNO"]
+  },
+  "audit_log": {
+    "id": ["Sequencial do registro de auditoria.", "INTERNO"],
+    "tenant_id": ["Tenant da ação.", "INTERNO"],
+    "action": ["Ação auditada (ex.: mudança de lifecycle, redrive).", "INTERNO"],
+    "resource_id": ["Recurso afetado.", "INTERNO"],
+    "actor": ["Quem executou (credencial de laboratório; em produção, identidade do operador).", "PESSOAL"],
+    "occurred_at": ["Instante da ação.", "INTERNO"]
+  },
+  "device_boot_sessions": {
+    "tenant_id": ["Tenant (PK composta).", "INTERNO"],
+    "device_id": ["Câmera (PK composta, FK para devices).", "INTERNO"],
+    "boot_id": ["Sessão de boot (PK composta).", "INTERNO"],
+    "first_seen_at": ["Primeiro evento do boot.", "INTERNO"],
+    "retired_at": ["Boot encerrado (substituído por outro).", "INTERNO"],
+    "firmware_version": ["Firmware naquele boot.", "INTERNO"]
+  }
+}
